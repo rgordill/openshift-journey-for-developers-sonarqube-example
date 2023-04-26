@@ -1,0 +1,37 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+spec:
+  selector:
+    matchLabels:
+      app: sonarqube
+      release: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+        release: sonarqube
+    spec:
+      containers:
+      - name: sonarqube
+        image: sonarqube:10.0.0-community
+        env:
+        - name: SONAR_JDBC_URL
+          value: jdbc:postgresql://postgresql.my-namespace.svc.cluster.local:5432/dbsample
+        - name: SONAR_JDBC_USERNAME
+          value: user
+        - name: SONAR_JDBC_PASSWORD
+          value: password
+        ports:
+        - containerPort: 9000
+          protocol: TCP
+          name: ceserver
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "1"
+
