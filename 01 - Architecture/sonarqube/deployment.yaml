@@ -1,0 +1,25 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+spec:
+  selector:
+    matchLabels:
+      app: sonarqube
+      release: sonarqube
+  template:
+    metadata:
+      labels:
+        app: sonarqube
+        release: sonarqube
+    spec:
+      containers:
+      - name: sonarqube
+        image: sonarqube:10.0.0-community
+        # env:
+        # - name: SONAR_JDBC_URL
+        #   value: jdbc:postgresql://pod-ip-address.my-namespace.pod.cluster.local:5432/dbsample
+        # - name: SONAR_JDBC_USERNAME
+        #   value: user
+        # - name: SONAR_JDBC_PASSWORD
+        #   value: password
