@@ -13,16 +13,44 @@ spec:
         app: sonarqube
         release: sonarqube
     spec:
+      initContainers:
+      - name: concat-properties
+        image: registry.access.redhat.com/ubi8/ubi:8.7
+        command:
+          - sh
+          - -c
+          - |
+            #!/bin/sh
+            if [ -f /tmp/props/sonar.properties ]; then
+              cat /tmp/props/sonar.properties > /tmp/result/sonar.properties
+            fi
+            if [ -f /tmp/props/secret.properties ]; then
+              cat /tmp/props/secret.properties > /tmp/result/sonar.properties
+            fi
+            if [ -f /tmp/props/sonar.properties -a -f /tmp/props/secret.properties ]; then
+              awk 1 /tmp/props/sonar.properties /tmp/props/secret.properties > /tmp/result/sonar.properties
+            fi
+        volumeMounts:
+        - mountPath: /tmp/props/sonar.properties
+          name: config
+          subPath: sonar.properties
+        - mountPath: /tmp/props/secret.properties
+          name: secret-config
+          subPath: secret.properties
+        - mountPath: /tmp/result
+          name: concat-dir
       containers:
       - name: sonarqube
         image: sonarqube:10.0.0-community
         env:
-        - name: SONAR_JDBC_URL
-          value: jdbc:postgresql://postgresql:5432/dbsample
-        - name: SONAR_JDBC_USERNAME
-          value: user
         - name: SONAR_JDBC_PASSWORD
-          value: password
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-jdbc
+              key: jdbc-password
+        envFrom:
+          - configMapRef:
+              name: sonarqube-jdbc-config
         ports:
         - containerPort: 9000
           protocol: TCP
@@ -73,3 +101,27 @@ spec:
           periodSeconds: 10
           failureThreshold: 24
           timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /opt/sonarqube/conf/
+          name: concat-dir
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube
+          subPath: data
+      volumes:
+      - name: sonarqube
+        persistentVolumeClaim:
+          claimName: sonarqube-data
+      - name: config
+        configMap:
+          name: sonarqube-config
+          items:
+          - key: sonar.properties
+            path: sonar.properties
+      - name: secret-config
+        secret:
+          secretName: sonarqube-config
+          items:
+          - key: secret.properties
+            path: secret.properties
+      - name : concat-dir
+        emptyDir: {}

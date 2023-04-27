@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-config
+data:
+  sonar.properties: |
+    sonar.es.bootstrap.checks.disable=true
+    # sonar.secretKeyPath=/opt/sonarqube/secret/sonar-secret.txt

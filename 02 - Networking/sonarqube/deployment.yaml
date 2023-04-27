@@ -18,7 +18,7 @@ spec:
         image: sonarqube:10.0.0-community
         env:
         - name: SONAR_JDBC_URL
-          value: jdbc:postgresql://postgresql.my-namespace.svc.cluster.local:5432/dbsample
+          value: jdbc:postgresql://postgresql:5432/dbsample
         - name: SONAR_JDBC_USERNAME
           value: user
         - name: SONAR_JDBC_PASSWORD

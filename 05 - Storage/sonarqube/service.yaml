@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+spec:
+  ports:
+  - name: ceserver
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    release: sonarqube
+    app: sonarqube
+  sessionAffinity: None
+  type: ClusterIP
