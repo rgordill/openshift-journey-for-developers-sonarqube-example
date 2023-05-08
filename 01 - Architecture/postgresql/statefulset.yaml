@@ -2,17 +2,22 @@ apiVersion: apps/v1
 kind: StatefulSet
 metadata:
   name: postgresql
+  labels:
+    app.kubernetes.io/part-of: sonarqube
+    app.openshift.io/runtime: postgresql
+  annotations:
+    app.openshift.io/vcs-uri: https://github.com/sclorg/postgresql-container
 spec:
   selector:
     matchLabels:
-      app: sonarqube
-      release: postgresql
+      app.kubernetes.io/name: sonarqube
+      app.kubernetes.io/component: database
   serviceName: postgresql-headless
   template:
     metadata:
       labels:
-        app: sonarqube
-        release: postgresql
+        app.kubernetes.io/name: sonarqube
+        app.kubernetes.io/component: database
       name: postgresql
     spec:
       containers:

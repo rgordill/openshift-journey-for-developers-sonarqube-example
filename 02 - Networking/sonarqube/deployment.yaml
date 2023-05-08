@@ -2,16 +2,23 @@ apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: sonarqube
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"StatefulSet","name":"postgresql"}]'
+    app.openshift.io/vcs-uri: https://github.com/SonarSource/docker-sonarqube
+  labels:
+    app.kubernetes.io/part-of: sonarqube
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: "17"
 spec:
   selector:
     matchLabels:
-      app: sonarqube
-      release: sonarqube
+      app.kubernetes.io/name: sonarqube
+      app.kubernetes.io/component: frontend
   template:
     metadata:
       labels:
-        app: sonarqube
-        release: sonarqube
+        app.kubernetes.io/name: sonarqube
+        app.kubernetes.io/component: frontend
     spec:
       containers:
       - name: sonarqube

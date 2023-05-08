@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-init
+data:
+  pg_stat_statements.sh: |-
+    #!/bin/bash
+
+    _psql () { psql --set ON_ERROR_STOP=1 "$@" ; }
+
+    _psql \
+    <<< "CREATE EXTENSION pg_stat_statements;"
