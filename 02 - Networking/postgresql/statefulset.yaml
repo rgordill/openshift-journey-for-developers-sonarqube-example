@@ -12,7 +12,7 @@ spec:
     matchLabels:
       app.kubernetes.io/name: sonarqube
       app.kubernetes.io/component: database
-  serviceName: postgresql-headless
+  serviceName: postgresql
   template:
     metadata:
       labels:

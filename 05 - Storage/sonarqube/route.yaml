@@ -4,7 +4,7 @@ metadata:
   name: sonarqube
 spec:
   port:
-    targetPort: ceserver
+    targetPort: sonarqube
   tls:
     termination: edge
   to:

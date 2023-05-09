@@ -31,5 +31,6 @@ spec:
         - name: SONAR_JDBC_PASSWORD
           value: password
         ports:
-        - containerPort: 9000
+        - name: http
+          containerPort: 9000
           protocol: TCP

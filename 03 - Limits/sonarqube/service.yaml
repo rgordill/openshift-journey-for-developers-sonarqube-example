@@ -4,12 +4,12 @@ metadata:
   name: sonarqube
 spec:
   ports:
-  - name: ceserver
+  - name: sonarqube
     port: 9000
     protocol: TCP
     targetPort: 9000
   selector:
-    release: sonarqube
-    app: sonarqube
+    app.kubernetes.io/name: sonarqube
+    app.kubernetes.io/component: frontend
   sessionAffinity: None
   type: ClusterIP
