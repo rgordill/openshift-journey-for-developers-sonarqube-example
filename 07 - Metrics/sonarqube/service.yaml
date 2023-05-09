@@ -1,0 +1,15 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: sonarqube
+spec:
+  ports:
+  - name: sonarqube
+    port: 9000
+    protocol: TCP
+    targetPort: 9000
+  selector:
+    app.kubernetes.io/name: sonarqube
+    app.kubernetes.io/component: frontend
+  sessionAffinity: None
+  type: ClusterIP

@@ -1,0 +1,148 @@
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+  name: postgresql
+  labels:
+    app.kubernetes.io/part-of: sonarqube
+    app.openshift.io/runtime: postgresql
+    app.openshift.io/runtime-version: "13"
+  annotations:
+    app.openshift.io/vcs-uri: https://github.com/sclorg/postgresql-container
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sonarqube
+      app.kubernetes.io/component: database
+  serviceName: postgresql
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sonarqube
+        app.kubernetes.io/component: database
+      name: postgresql
+    spec:
+      containers:
+      - name: postgresql
+        image: quay.io/fedora/postgresql-15
+        env:
+        - name: POSTGRESQL_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgresql-credentials
+        - name: POSTGRESQL_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgresql-credentials
+        - name: POSTGRESQL_DATABASE
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgresql-credentials
+        - name: POSTGRESQL_LOG_DESTINATION
+          value: /dev/stderr
+        ports:
+        - containerPort: 5432
+          protocol: TCP
+        resources:
+          requests:
+            memory: "256Mi"
+            cpu: "500m"
+          limits:
+            memory: "256Mi"
+            cpu: "500m"
+        readinessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+          initialDelaySeconds: 5
+          timeoutSeconds: 1
+        livenessProbe:
+          exec:
+            command:
+            - /usr/libexec/check-container
+            - --live
+          initialDelaySeconds: 120
+          timeoutSeconds: 10
+        volumeMounts:
+        - name: data
+          mountPath: /var/lib/pgsql/data
+        - name: extra-conf
+          mountPath: /opt/app-root/src/postgresql-cfg
+        - name: init-scripts
+          mountPath: /opt/app-root/src/postgresql-init
+      - name: postgresql-exporter
+        args:
+        - "--extend.query-path=/etc/config.yaml"
+        - "--disable-settings-metrics"
+        - "--auto-discover-databases"
+        env:
+        - name: DATA_SOURCE_HOST
+          valueFrom:
+            fieldRef:
+              fieldPath: metadata.name
+        - name: DATA_SOURCE_DB
+          valueFrom:
+            secretKeyRef:
+              key: database-name
+              name: postgresql-credentials
+        - name: DATA_SOURCE_URI
+          value: "$(DATA_SOURCE_HOST):5432/$(DATA_SOURCE_DB)?sslmode=disable"
+        - name: DATA_SOURCE_USER
+          valueFrom:
+            secretKeyRef:
+              key: database-user
+              name: postgresql-credentials
+        - name: DATA_SOURCE_PASS
+          valueFrom:
+            secretKeyRef:
+              key: database-password
+              name: postgresql-credentials
+        image: "quay.io/prometheuscommunity/postgres-exporter:v0.10.1"
+        imagePullPolicy: IfNotPresent
+        ports:
+          - name: metrics
+            containerPort: 9187
+            protocol: TCP
+        livenessProbe:
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+          httpGet:
+            path: /
+            port: metrics
+        readinessProbe:
+          initialDelaySeconds: 0
+          timeoutSeconds: 1
+          httpGet:
+            path: /
+            port: metrics
+        resources: {}
+        volumeMounts:
+          - name: metric-queries
+            mountPath: /etc/config.yaml
+            subPath: config.yaml
+      volumes:
+      - name: extra-conf
+        configMap:
+          defaultMode: 420
+          name: postgresql-conf
+      - name: metric-queries
+        configMap:
+          defaultMode: 420
+          name: cm-common-exporter-queries
+      - name: init-scripts
+        configMap:
+          name: postgresql-init
+          defaultMode: 0777
+  volumeClaimTemplates:
+  - metadata:
+      name: data
+    spec:
+      accessModes: 
+      - "ReadWriteOnce"
+      resources:
+        requests:
+          storage: 1Gi
+
+
