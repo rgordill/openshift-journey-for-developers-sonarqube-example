@@ -1,0 +1,12 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-config
+data:
+  sonar.properties: |
+    sonar.es.bootstrap.checks.disable=true
+    sonar.log.console=true
+    sonar.log.jsonOutput=true
+    #sonar.web.javaAdditionalOpts=-javaagent:/opt/sonarqube/data/jmx_prometheus_javaagent.jar=8000:/opt/sonarqube/conf/prometheus-config.yaml
+    #sonar.ce.javaOpts=-javaagent:/opt/sonarqube/data/jmx_prometheus_javaagent.jar=8001:/opt/sonarqube/conf/prometheus-config.yaml
+    # sonar.secretKeyPath=/opt/sonarqube/secret/sonar-secret.txt

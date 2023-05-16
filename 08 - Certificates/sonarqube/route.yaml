@@ -5,6 +5,9 @@ metadata:
 spec:
   port:
     targetPort: sonarqube
+  tls:
+    termination: edge
+    insecureEdgeTerminationPolicy: Redirect
   to:
     kind: Service
     name: sonarqube

@@ -1,0 +1,29 @@
+apiVersion: cert-manager.io/v1
+kind: Certificate
+metadata:
+  name: postgresql-certs
+spec:
+  secretName: postgresql-certs
+  duration: 2160h # 90d
+  renewBefore: 360h # 15d
+  subject:
+    organizations:
+      - Developers
+  commonName: postgresql
+  isCA: false
+  privateKey:
+    algorithm: RSA
+    encoding: PKCS8
+    size: 2048
+  usages:
+    - server auth
+    - client auth
+  dnsNames:
+    - postgresql
+    - postgresql-developers.apps.ocp.labmad.redhat.com
+#  ipAddresses:
+#    - 192.168.0.5
+  issuerRef:
+    name: ca-issuer
+    kind: Issuer
+    group: cert-manager.io

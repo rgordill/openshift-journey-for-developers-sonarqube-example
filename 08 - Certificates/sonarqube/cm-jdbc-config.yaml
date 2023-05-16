@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sonarqube-jdbc-config
+data:
+  SONAR_JDBC_USERNAME: user
+  SONAR_JDBC_URL: jdbc:postgresql://postgresql:5432/dbsample?ssl=true&sslmode=verify-ca&sslrootcert=/opt/sonarqube/certs/server-ca.crt

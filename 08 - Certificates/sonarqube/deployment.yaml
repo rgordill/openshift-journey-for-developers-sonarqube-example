@@ -1,0 +1,172 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sonarqube
+  annotations:
+    app.openshift.io/connects-to: '[{"apiVersion":"apps/v1","kind":"StatefulSet","name":"postgresql"}]'
+    app.openshift.io/vcs-uri: https://github.com/SonarSource/docker-sonarqube
+  labels:
+    app.kubernetes.io/part-of: sonarqube
+    app.openshift.io/runtime: java
+    app.openshift.io/runtime-version: "17"
+spec:
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: sonarqube
+      app.kubernetes.io/component: frontend
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: sonarqube
+        app.kubernetes.io/component: frontend
+    spec:
+      initContainers:
+      - name: concat-properties
+        image: registry.access.redhat.com/ubi8/ubi:8.7
+        command:
+          - sh
+          - -c
+          - |
+            #!/bin/sh
+            if [ -f /tmp/props/sonar.properties ]; then
+              cat /tmp/props/sonar.properties > /tmp/result/sonar.properties
+            fi
+            if [ -f /tmp/props/secret.properties ]; then
+              cat /tmp/props/secret.properties > /tmp/result/sonar.properties
+            fi
+            if [ -f /tmp/props/sonar.properties -a -f /tmp/props/secret.properties ]; then
+              awk 1 /tmp/props/sonar.properties /tmp/props/secret.properties > /tmp/result/sonar.properties
+            fi
+        volumeMounts:
+        - mountPath: /tmp/props/sonar.properties
+          name: config
+          subPath: sonar.properties
+        - mountPath: /tmp/props/secret.properties
+          name: secret-config
+          subPath: secret.properties
+        - mountPath: /tmp/result
+          name: concat-dir
+      - name: inject-prometheus-exporter
+        image: registry.access.redhat.com/ubi8/openjdk-17
+        command: ["/bin/sh","-c"]
+        args: ["cp /opt/jboss/container/prometheus/jmx_prometheus_javaagent.jar /opt/sonarqube/data/jmx_prometheus_javaagent.jar"]
+        volumeMounts:
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube
+          subPath: data       
+      containers:
+      - name: sonarqube
+        image: sonarqube:10.0.0-community
+        env:
+        - name: SONAR_JDBC_PASSWORD
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-jdbc
+              key: jdbc-password
+        - name: SONAR_WEB_SYSTEMPASSCODE
+          valueFrom:
+            secretKeyRef:
+              name: sonarqube-monitoring-passcode
+              key: SONAR_WEB_SYSTEMPASSCODE
+        envFrom:
+          - configMapRef:
+              name: sonarqube-jdbc-config
+        ports:
+        - name: http
+          containerPort: 9000
+          protocol: TCP
+        # - name: webMonitoring
+        #   containerPort: 8000
+        #   protocol: TCP
+        # - name: ceMonitoring
+        #   containerPort: 8001
+        #   protocol: TCP
+        resources:
+          requests:
+            memory: "1024Mi"
+            cpu: "250m"
+          limits:
+            memory: "4096Mi"
+            cpu: "1"
+        livenessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              host="$(hostname -i || echo '127.0.0.1')"
+              reply=$(wget --no-proxy -qO- --header="X-Sonar-Passcode: $SONAR_WEB_SYSTEMPASSCODE" http://${host}:9000/api/system/liveness 2>&1)
+              if [ -z "$reply" ]; then exit 0; else exit 1; fi
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 6
+          timeoutSeconds: 1
+        readinessProbe:
+          exec:
+            command:
+            - sh
+            - -c
+            - |
+              #!/bin/bash
+              # A Sonarqube container is considered ready if the status is UP, DB_MIGRATION_NEEDED or DB_MIGRATION_RUNNING
+              # status about migration are added to prevent the node to be kill while sonarqube is upgrading the database.
+              host="$(hostname -i || echo '127.0.0.1')"
+              if wget --no-proxy -qO- http://${host}:9000/api/system/status | grep -q -e '"status":"UP"' -e '"status":"DB_MIGRATION_NEEDED"' -e '"status":"DB_MIGRATION_RUNNING"'; then
+                exit 0
+              fi
+              exit 1
+          initialDelaySeconds: 60
+          periodSeconds: 30
+          failureThreshold: 6
+          timeoutSeconds: 1
+        startupProbe:
+          httpGet:
+            scheme: HTTP
+            path: /api/system/status
+            port: 9000
+          initialDelaySeconds: 30
+          periodSeconds: 10
+          failureThreshold: 24
+          timeoutSeconds: 1
+        volumeMounts:
+        - mountPath: /opt/sonarqube/conf/
+          name: concat-dir
+        - mountPath: /opt/sonarqube/data
+          name: sonarqube
+          subPath: data
+        - mountPath: /opt/sonarqube/conf/prometheus-config.yaml
+          subPath: prometheus-config.yaml
+          name: prometheus-config
+        - name: jdbc-certs
+          mountPath: /opt/sonarqube/certs
+      volumes:
+      - name: sonarqube
+        persistentVolumeClaim:
+          claimName: sonarqube-data
+      - name: config
+        configMap:
+          name: sonarqube-config
+          items:
+          - key: sonar.properties
+            path: sonar.properties
+      - name: secret-config
+        secret:
+          secretName: sonarqube-config
+          items:
+          - key: secret.properties
+            path: secret.properties
+      - name: prometheus-config
+        configMap:
+          name: cm-prometheus-config
+          items:
+            - key: prometheus-config.yaml
+              path: prometheus-config.yaml
+      - name: jdbc-certs
+        secret:
+          secretName: postgresql-certs
+          defaultMode: 0640
+          items:
+          - key: ca.crt
+            path: server-ca.crt
+      - name : concat-dir
+        emptyDir: {}

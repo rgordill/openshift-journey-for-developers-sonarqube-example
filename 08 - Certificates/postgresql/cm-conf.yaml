@@ -1,0 +1,13 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: postgresql-conf
+data:
+  10-extensions.conf: |-
+    shared_preload_libraries = 'pg_stat_statements'
+  01-ssl.conf: |-
+    ssl = on
+    ssl_cert_file = '/opt/app-root/src/certs/tls.crt' # server certificate
+    ssl_key_file =  '/opt/app-root/src/certs/tls.key' # server private key
+    #ssl_ca_file                                   # trusted certificate authorities
+    #ssl_crl_file                                  # certificates revoked by certificate authorities

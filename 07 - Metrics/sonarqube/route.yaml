@@ -5,8 +5,6 @@ metadata:
 spec:
   port:
     targetPort: sonarqube
-  tls:
-    termination: edge
   to:
     kind: Service
     name: sonarqube
